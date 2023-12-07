@@ -123,7 +123,73 @@ export const updateProfile = async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(500).json({
+            success:false,
             message: "Server error"
+        })
+    }
+}
+
+export const forgotPassword = async(req, res) =>{
+    const {id} = req.user;
+    try {
+        const user = await User.findById(id);
+        if(!user){
+            return res.status(401).json({
+                success:false,
+                message:"No user found"
+            })
+        }
+
+        const forgotPasswordToken = Math.random().toString(36).slice(2);
+        const forgotPasswordExpiry = new Date(Date.now() + 3600000);
+
+        user.forgotPasswordToken=forgotPasswordToken;
+        user.forgotPasswordExpiry=forgotPasswordExpiry;
+        await user.save();
+
+        return res.status(200).json({
+            success:true,
+            message:"Forget password token updated",
+            data:user
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:"Server error"
+        })
+    }
+}
+
+export const resetPassword = async(req, res) =>{
+    const {token} = req.params;
+    const {newPassword} = req.body;
+    console.log(token);
+    try {
+        let user = await User.findOne({forgotPasswordToken:token, forgotPasswordExpiry:{$gt:new Date()}});
+        if(!user){
+            return res.status(401).json({
+                success:false,
+                message:"No user found"
+            })
+        }
+
+        user.password = newPassword;
+        user.forgotPasswordToken=null;
+        user.forgotPasswordExpiry=null;
+
+        await user.save();
+
+        return res.status(200).json({
+            success:true,
+            message:"Password updated",
+            data:user
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:"Server error"
         })
     }
 }
